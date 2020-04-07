@@ -86,7 +86,8 @@ case $OP in
         export MODE # read by wifi-flood-daemon
         case $MODE in
             pulse|none)
-                nohup setsid wifi-flood-daemon > ~/.wifi-flood/out 2>&1 &;;
+                base=$(dirname $(realpath $0))
+                nohup setsid $base/wifi-flood-daemon > ~/.wifi-flood/out 2>&1 &;;
             *)
                 >&2 echo Unknown mode $MODE; exit 1 ;;
         esac

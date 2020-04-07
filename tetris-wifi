@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-basedir=~/.tetris-wifi
+confdir=~/.tetris-wifi
 probs="(pulse=>0.5, none=>0.5)"
 # NE 03 Apr 2020 don't have stream yet
 # probs="(pulse=>0.3, stream=>0.3, off=>0.4)"
@@ -25,9 +25,9 @@ fi
 
 set -e
 
-mkdir -p $basedir
+mkdir -p $confdir
 
-lockf=$basedir/lock
+lockf=$confdir/lock
 if ( set -o noclobber; {date; echo $$} > "$lockf" ) 2>/dev/null; then
     echo Lock succeeded
 else
@@ -59,7 +59,7 @@ prompt user "What is your username?"
 prompt alert_pre "How alert do you feel (0-9)?"
 #echo alert_pre=$alert_pre
 
-prompt comments_pre "Any comments? (remember to check with meter)"
+prompt comments_pre "Any comments?"
 
 # set wifi randomly, recording the probabilities too
 randmode=$(perl -le '$r=rand(); @h='$probs'; $a=0; while($res=shift @h) { $a+=shift @h; last if $a>$r; }; print $res')
@@ -67,26 +67,26 @@ randmode=$(perl -le '$r=rand(); @h='$probs'; $a=0; while($res=shift @h) { $a+=sh
 wifi-flood start -m $randmode
 
 # run tetris, with output file
-tetris -o $basedir/stats.out $ARGS
+tetris -o $confdir/stats.out $ARGS
 
 # ask user about alertness and perception of wifi status
 prompt alert_post "How alert do you feel now (0-9)?"
 #echo alert_post=$alert_post
 prompt thought_wifi "What do you think was the state of the WiFi during the game? (pulse, none)"
 #echo thought_wifi=$thought_wifi
-prompt comments "Any other comments?"
+prompt comments "Any other comments? (remember to check with meter)"
 
 # output variables to month/date file
 datepath=$(date --rfc-3339=seconds | perl -pe 's! !/!; s/:/_/g')
-logfile=$basedir/$datepath.log
+logfile=$confdir/$datepath.log
 >&2 echo Logging results to $logfile
 
 mkdir -p $(dirname $logfile)
 
 (
     echo "User name: $user"
-    echo "Stats timestamp: "$(date -r $basedir/stats.out --rfc-3339=seconds)
-    cat $basedir/stats.out
+    echo "Stats timestamp: "$(date -r $confdir/stats.out --rfc-3339=seconds)
+    cat $confdir/stats.out
     echo "Alert level before: $alert_pre"
     echo "Alert level after: $alert_post"
     echo "Wifi mode: $randmode"
