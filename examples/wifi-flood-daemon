@@ -1,0 +1,55 @@
+#!/bin/zsh
+
+mkdir -p ~/.wifi-flood
+
+log_mode () {
+    MODE=$1
+    (date --rfc-3339=seconds;
+        echo $MODE
+    ) >> ~/.wifi-flood/log
+    echo $MODE > ~/.wifi-flood/state
+}
+
+cleanup () {
+    rfkill block all
+    log_mode off
+    exit
+}
+
+trap cleanup INT TERM
+
+echo MODE=$MODE
+
+log_mode $MODE
+
+echo $$ > ~/.wifi-flood/pid
+
+case $MODE in
+    pulse)
+        # XXX iwlist seems to work better than rfkill but
+        # sometimes reports that interface is down
+        while true; do
+            sleep 0.1;
+            # rfkill block wlan
+            rfkill unblock wlan
+        sudo ip link set wi0 up
+        sudo ifconfig wi0 up
+            sudo iwlist wi0 scan;
+#            sudo wpa_cli -i wi0 scan
+        done
+        # while true; do
+        #     date
+        #     rfkill block wlan
+        #     rfkill unblock wlan
+        #     sleep 0.5
+        # done
+        ;;
+    none)
+        # do nothing
+        rfkill block wlan
+        while true; do sleep 0.5; done
+        ;;
+    *)
+        >&2 echo Bad mode $MODE;
+        ;;
+esac

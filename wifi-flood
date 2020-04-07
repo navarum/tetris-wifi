@@ -1,0 +1,94 @@
+#!/bin/zsh
+
+set -e
+
+ARGS=()
+MODE=pulse
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -m) MODE=$2; MODESPEC=1; shift;;
+        -r) RATE=$2; shift;;
+        -*) echo Unknown option $1; exit 1;;
+        *) ARGS=($1 $ARGS);;
+    esac
+    shift
+done
+
+[[ $#ARGS -ge 1 ]] || { >&2 echo Need to specify op; exit 1 }
+OP=$ARGS[1]
+#echo OP=$OP
+
+mkdir -p ~/.wifi-flood
+
+reset_wifi () {
+    if false; then
+        enable_wifi
+        sudo systemctl restart dhcpcd@wi0.service
+    else
+        # default is disabled
+        disable_wifi
+    fi
+}
+
+disable_wifi () {
+    rfkill block all
+}
+
+enable_wifi () {
+    rfkill unblock wlan
+    # these must succeed due to set -e
+    rfkill list wlan | grep "Soft blocked: no" >/dev/null
+    rfkill list wlan | grep "Hard blocked: no" >/dev/null
+}
+
+case $OP in
+    status)
+        ;;
+
+    stop)
+        rfkill block all
+        if [[ "$MODESPEC" -ne 0 ]]; then
+            >&2 echo "Don't specify -m with 'stop'"; exit 1
+        fi
+        MODE="$(cat ~/.wifi-flood/state)"
+        case $MODE in
+            pulse|none);;
+            off)
+                >&2 echo Already stopped; exit 1;;
+            *)
+                >&2 echo Unknown mode $MODE; exit 1;;
+        esac
+        PROC="$(cat ~/.wifi-flood/pid)"
+        if [[ ! -d /proc/$PROC ]]; then
+            >&2 echo No process $PROC found;
+            exit 1
+        fi
+        while [[ -d /proc/$PROC ]]; do
+            >&2 echo Killing process
+            kill $PROC;
+            >&2 echo Sent signal
+            sleep 0.5;
+        done
+        MODE="$(cat ~/.wifi-flood/state)"
+        if [[ "$MODE" != "off" ]]; then
+            >&2 echo Something went wrong, state is not off
+            exit 1
+        fi
+        ;;
+
+    start)
+        OLDMODE="$(cat ~/.wifi-flood/state)"
+        if [[ "$OLDMODE" != "off" ]]; then
+            >&2 echo Already started
+            exit 1
+        fi
+        enable_wifi
+        export MODE # read by wifi-flood-daemon
+        case $MODE in
+            pulse|none)
+                nohup setsid wifi-flood-daemon > ~/.wifi-flood/out 2>&1 &;;
+            *)
+                >&2 echo Unknown mode $MODE; exit 1 ;;
+        esac
+        ;;
+esac

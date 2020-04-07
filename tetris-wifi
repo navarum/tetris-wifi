@@ -1,0 +1,111 @@
+#!/bin/zsh
+
+basedir=~/.tetris-wifi
+probs="(pulse=>0.5, none=>0.5)"
+# NE 03 Apr 2020 don't have stream yet
+# probs="(pulse=>0.3, stream=>0.3, off=>0.4)"
+
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -t) test=1;;
+        *) ARGS=($ARGS $1);;
+    esac
+    shift
+done
+
+if [[ "$test" -ne 0 ]]; then
+    >&2 echo "Testing wifi-flood (pulse)"
+    wifi-flood start -m pulse
+    sleep 10
+    >&2 echo "Testing wifi-flood (off)"
+    wifi-flood stop
+    exit 0
+fi
+
+set -e
+
+mkdir -p $basedir
+
+lockf=$basedir/lock
+if ( set -o noclobber; {date; echo $$} > "$lockf" ) 2>/dev/null; then
+    echo Lock succeeded
+else
+    >&2 echo Failed to lock $lockf
+    >&2 echo Is another game in progress?
+    exit 1
+fi
+cleanup () {
+    wifi-flood stop 2>/dev/null || true;
+    >&2 echo Removing lock; rm -f "$lockf"
+    exit
+}
+setopt posix_traps # so that we can trap EXIT
+trap 'exit $?' INT TERM
+trap 'cleanup;' EXIT
+
+# function to ask question
+prompt () {
+    var=$1
+    q=$2
+    echo $q;
+    vared -c $var;
+}
+
+user=$USER
+prompt user "What is your username?"
+
+# ask user about alertness
+prompt alert_pre "How alert do you feel (0-9)?"
+#echo alert_pre=$alert_pre
+
+prompt comments_pre "Any comments? (remember to check with meter)"
+
+# set wifi randomly, recording the probabilities too
+randmode=$(perl -le '$r=rand(); @h='$probs'; $a=0; while($res=shift @h) { $a+=shift @h; last if $a>$r; }; print $res')
+
+wifi-flood start -m $randmode
+
+# run tetris, with output file
+tetris -o $basedir/stats.out $ARGS
+
+# ask user about alertness and perception of wifi status
+prompt alert_post "How alert do you feel now (0-9)?"
+#echo alert_post=$alert_post
+prompt thought_wifi "What do you think was the state of the WiFi during the game? (pulse, none)"
+#echo thought_wifi=$thought_wifi
+prompt comments "Any other comments?"
+
+# output variables to month/date file
+datepath=$(date --rfc-3339=seconds | perl -pe 's! !/!; s/:/_/g')
+logfile=$basedir/$datepath.log
+>&2 echo Logging results to $logfile
+
+mkdir -p $(dirname $logfile)
+
+(
+    echo "User name: $user"
+    echo "Stats timestamp: "$(date -r $basedir/stats.out --rfc-3339=seconds)
+    cat $basedir/stats.out
+    echo "Alert level before: $alert_pre"
+    echo "Alert level after: $alert_post"
+    echo "Wifi mode: $randmode"
+    echo "Thought wifi mode was: $thought_wifi"
+    echo "Distribution: $probs"
+    echo "Comments before start: $comments_pre"
+    echo "Comments: $comments"
+) >> $logfile
+
+# reveal actual status
+echo The actual state of the WiFi was $randmode
+
+if [[ "$(cat ~/.wifi-flood/state)" != $randmode ]]; then
+    >&2 echo "Warning! ~/.wifi-flood/state changed"
+    >&2 echo "Expected $randmode"
+    >&2 echo "Found: $(cat ~/.wifi-flood/state)"
+    wifi-flood stop
+    exit 1;
+fi
+
+# handled by cleanup
+wifi-flood stop
