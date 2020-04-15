@@ -72,7 +72,7 @@ tetris -o $confdir/stats.out $ARGS
 # ask user about alertness and perception of wifi status
 prompt alert_post "How alert do you feel now (0-9)?"
 #echo alert_post=$alert_post
-prompt thought_wifi "What do you think was the state of the WiFi during the game? (pulse, none)"
+prompt thought_wifi "What did you think was the state of the WiFi during the game? (pulse, none)"
 #echo thought_wifi=$thought_wifi
 prompt comments "Any other comments? (remember to check with meter)"
 
