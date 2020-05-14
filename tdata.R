@@ -144,5 +144,6 @@ pbinom(sum(d[,1]==d[,2]),nrow(d),0.5)
 
 if(1) {
   plot_on_off(tetris[1:53,],"Score")
-#  plot_on_off(tetris, "Score")
+  dev.new()
+  plot_on_off(tetris, "Score")
 }
