@@ -8,7 +8,7 @@ Before the start of each game, the script randomly decides whether to emit WiFi 
 
 - Install Zsh, if you haven't already.
 
-- Edit and test `wifi-flood-daemon` to make sure that it does the right thing on your laptop. Ideally you should be able to detect a change using an RF meter. Also, it should restore the network when it is done.
+- Edit and test `wifi-flood-daemon` to make sure that it does the right thing on your laptop. Ideally you should be able to detect a change using an RF meter. When this is done, you'll have to manually restore any wireless networking setup you had.
     
         $ ./wifi-flood start
         $ ./wifi-flood stop
