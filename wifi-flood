@@ -46,15 +46,14 @@ case $OP in
         ;;
 
     stop)
-        rfkill block all
         if [[ "$MODESPEC" -ne 0 ]]; then
             >&2 echo "Don't specify -m with 'stop'"; exit 1
         fi
         MODE="$(cat ~/.wifi-flood/state)"
         case $MODE in
-            pulse|none);;
+            pulse|none) ;;
             off)
-                >&2 echo Already stopped; exit 1;;
+                >&2 echo Already stopped wifi-flood; exit 1;;
             *)
                 >&2 echo Unknown mode $MODE; exit 1;;
         esac
@@ -69,6 +68,10 @@ case $OP in
             >&2 echo Sent signal
             sleep 0.5;
         done
+
+        >&2 echo Turning off WiFi
+        rfkill block all
+
         MODE="$(cat ~/.wifi-flood/state)"
         if [[ "$MODE" != "off" ]]; then
             >&2 echo Something went wrong, state is not off
@@ -79,9 +82,10 @@ case $OP in
     start)
         OLDMODE="$(cat ~/.wifi-flood/state)"
         if [[ "$OLDMODE" != "off" ]]; then
-            >&2 echo Already started
+            >&2 echo Already started wifi-flood
             exit 1
         fi
+        >&2 echo Changing WiFi state
         enable_wifi
         export MODE # read by wifi-flood-daemon
         case $MODE in

@@ -36,7 +36,8 @@ else
     exit 1
 fi
 cleanup () {
-    wifi-flood stop 2>/dev/null || true;
+    wifi-flood stop || true;
+    # wifi-flood stop 2>/dev/null || true;
     >&2 echo Removing lock; rm -f "$lockf"
     exit
 }
